@@ -1,0 +1,25 @@
+# depslib dependency file v1.0
+1591466560 source:/home/pi/Projects/BoatController/main.cpp
+	<ctime>
+	<iomanip>
+	<iostream>
+	<sstream>
+	<thread>
+	<libgpsmm.h>
+
+1591453061 /home/pi/Projects/gpsd/libgpsmm.h
+	<sys/types.h>
+	"gps.h"
+	<QtCore/qglobal.h>
+
+1591453061 /home/pi/Projects/gpsd/gps.h
+	<inttypes.h>
+	<limits.h>
+	<pthread.h>
+	<signal.h>
+	<stdbool.h>
+	<stdio.h>
+	<sys/time.h>
+	<sys/types.h>
+	<time.h>
+
