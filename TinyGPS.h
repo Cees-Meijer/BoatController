@@ -27,7 +27,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <limits.h>
 #include <ctime>
-#include <wiringPi.h>
+#include <chrono>
+
 #include <math.h>
 #define PI 3.1415
 #define TWO_PI 6.2831853
@@ -41,8 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPS_KM_PER_METER 0.001
 #define _GPS_FEET_PER_METER 3.2808399
 #define _GPS_MAX_FIELD_SIZE 15
-
-unsigned int millis();
+uint64_t millis();
 
 struct RawDegrees
 {
@@ -60,7 +60,8 @@ struct TinyGPSLocation
 public:
    bool isValid() const    { return valid; }
    bool isUpdated() const  { return updated; }
-   unsigned int age() const    { return valid ? millis() - lastCommitTime : (unsigned long)ULONG_MAX; }
+   uint64_t age() const    { return valid ? millis() - lastCommitTime : (uint64_t)ULONG_MAX; }
+   uint64_t time_tag() const {return lastCommitTime;}
    const RawDegrees &rawLat()     { updated = false; return rawLatData; }
    const RawDegrees &rawLng()     { updated = false; return rawLngData; }
    double lat();
@@ -72,7 +73,7 @@ public:
 private:
    bool valid, updated;
    RawDegrees rawLatData, rawLngData, rawNewLatData, rawNewLngData;
-   unsigned long lastCommitTime;
+   uint64_t lastCommitTime;
    void commit();
    void setLatitude(const char *term);
    void setLongitude(const char *term);

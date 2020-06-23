@@ -34,15 +34,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GNRMCterm   "GNRMC"
 #define _GNGGAterm   "GNGGA"
 
-unsigned int millis()
+uint64_t millis()
 {
-struct timespec T;
-	unsigned int T_millis;
+using namespace std::chrono;
+  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 
-	/* measure monotonic time */
-	clock_gettime(CLOCK_MONOTONIC, &T);
-	T_millis = T.tv_nsec / 1000000;
-	return T_millis;
 }
 
 TinyGPSPlus::TinyGPSPlus()
