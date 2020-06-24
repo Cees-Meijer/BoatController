@@ -4,6 +4,7 @@
 #include <thread>
 #include <string.h>
 
+
 #include "BoatController.h"
 
 using namespace std;
@@ -45,11 +46,11 @@ int main(int argc, char *argv[])
   imu.load_calibration();
   imu.enable();
   imu.measure_offsets();
-  Vec V;
-  V.X=0;V.Y=0,V.Z=0;
-  std::tuple<float,float,float> acc;
-  acc=imu.read_acc();
-
+  //Vec V;
+  //V.X=0;V.Y=0,V.Z=0;
+  //std::tuple<float,float,float> acc;
+   vector acc=imu.read_acc();
+   printf("Controller started. Waiting for GPS fix...\r\n");
    while(true)
    {
     chars_read=gpioSerialRead(18,serial_buff,1024);
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
           SendGPS(gps);
           //serWrite(fd,serial_msg,strnlen(serial_msg,1024));
           acc=imu.read_acc();
-           float nx= std::get<0>(acc);float ny = std::get<1>(acc);float nz = std::get<2>(acc);
+           float nx= acc(0);float ny = acc(1);float nz = acc(2);
            float roll =atan2(ny, nz)*60;
 
            float pitch =atan2(nx,nz)*60;

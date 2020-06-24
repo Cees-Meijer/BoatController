@@ -6,7 +6,6 @@
 #include <iostream>
 #include <fstream>
 #include <wordexp.h>
-#include <tuple>
 
 minimu9::comm_config minimu9::auto_detect(const std::string & i2c_bus_name)
 {
@@ -280,16 +279,10 @@ void minimu9::handle::load_calibration()
   {
     throw posix_error("Failed to open calibration file ~/.minimu9-ahrs-cal");
   }
-int m_min[3]; int m_max[3];
-file >> m_min[0] >> m_max[0]
-       >> m_min[1] >> m_max[1]
-       >> m_min[2] >> m_max[2];
-       mag_max = std::make_tuple(m_max[0],m_max[1],m_max[2]);
-       mag_min = std::make_tuple(m_min[0],m_min[1],m_min[2]);
-  //file >> mag_min(0) >> mag_max(0)
-  //     >> mag_min(1) >> mag_max(1)
-  //     >> mag_min(2) >> mag_max(2);
 
+  file >> mag_min(0) >> mag_max(0)
+       >> mag_min(1) >> mag_max(1)
+       >> mag_min(2) >> mag_max(2);
   if (file.fail() || file.bad())
   {
     throw std::runtime_error("Failed to parse calibration file ~/.minimu9-ahrs-cal");
@@ -373,57 +366,37 @@ float minimu9::handle::get_gyro_scale() const
 
 void minimu9::handle::measure_offsets()
 {
-
-  long gt[3];
-  gt[0]=0;gt[1]=0;gt[2]=0;
+  // LSM303 accelerometer: 8 g sensitivity.  3.8 mg/digit; 1 g = 256.
+  gyro_offset = vector::Zero();
   const int sampleCount = 32;
   for(int i = 0; i < sampleCount; i++)
   {
     read_gyro_raw();
-    gt[0]+=g[0];gt[1]+=g[1];gt[2]+=g[2];
+    gyro_offset += vector_from_ints(&g);
     usleep(20 * 1000);
   }
-     gyro_offset[0] = gt[0] / sampleCount;gyro_offset[1] = gt[1]/ sampleCount;gyro_offset[2] =gt[2]/ sampleCount;
-
+  gyro_offset /= sampleCount;
 }
 
-std::tuple<float,float,float> minimu9::handle::read_mag()
+vector minimu9::handle::read_mag()
 {
   read_mag_raw();
 
-  float v[3];
-  v[0] = (float)(m[0] - std::get<0>(mag_min)) / (std::get<0>(mag_max) - std::get<0>(mag_min)) * 2 - 1;
-  v[1] = (float)(m[1] - std::get<1>(mag_min)) / (std::get<1>(mag_max) - std::get<1>(mag_min)) * 2 - 1;
-  v[2] = (float)(m[2] - std::get<2>(mag_min)) / (std::get<2>(mag_max) - std::get<2>(mag_min)) * 2 - 1;
-  return std::make_tuple(v[0],v[1],v[2]);
-}
-/*
-void minimu9::handle::read_acc(Vec* V)
-{
-
-  read_acc_raw();
-  float scale= get_acc_scale();
-  float acc[3];
-  V->X = (float)a[0] *scale; V->Y = (float)a[1]*scale;V->Z = (float)a[2]*scale;
-  return ;
-}
-*/
-std::tuple<float,float,float>  minimu9::handle::read_acc()
-{
-  read_acc_raw();
-  float scale= get_acc_scale();
-  float acc[3];
-  acc[0] = (float)a[0] *scale; acc[1] = (float)a[1]*scale;acc[2] = (float)a[2]*scale;
-  return std::make_tuple(acc[0],acc[1],acc[2]);
+  vector v;
+  v(0) = (float)(m[0] - mag_min(0)) / (mag_max(0) - mag_min(0)) * 2 - 1;
+  v(1) = (float)(m[1] - mag_min(1)) / (mag_max(1) - mag_min(1)) * 2 - 1;
+  v(2) = (float)(m[2] - mag_min(2)) / (mag_max(2) - mag_min(2)) * 2 - 1;
+  return v;
 }
 
-std::tuple<float,float,float> minimu9::handle::read_gyro()
+vector minimu9::handle::read_acc()
+{
+  read_acc_raw();
+  return vector_from_ints(&a) * get_acc_scale();
+}
+
+vector minimu9::handle::read_gyro()
 {
   read_gyro_raw();
-  float gyro[3];
-  float scale= get_gyro_scale();
-  gyro[0] = (float) (g[0]-gyro_offset[0])*scale;
-  gyro[1] = (float) (g[1]-gyro_offset[1])*scale;
-  gyro[2] = (float) (g[2]-gyro_offset[2])*scale;
-  return std::make_tuple(gyro[0],gyro[1],gyro[2]);
+  return (vector_from_ints(&g) - gyro_offset) * get_gyro_scale();
 }

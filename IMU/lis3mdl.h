@@ -1,6 +1,6 @@
 #pragma once
 
-#include "i2c_bus.h"
+#include <i2c_bus.h>
 #include <cstdint>
 
 namespace lis3mdl

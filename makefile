@@ -7,7 +7,7 @@ SRCS := $(shell find $(SRC_DIRS) -name "*.cpp"  -or -name "*.c" -or -name "*.s")
 OBJS := $(addsuffix .o,$(basename $(SRCS)))
 DEPS := $(OBJS:.o=.d)
 
-LDLIBS := -lpigpio
+LDLIBS := -lpigpio -lboost_program_options
 
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))

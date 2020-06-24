@@ -6,6 +6,7 @@
 // Eigen lirbary and the 'vector' type we made from it.
 // Install libraries first :
 //sudo apt-get install libi2c-dev libeigen3-dev libboost-program-options-dev
+#include "vector.h"
 
 
 #include "./IMU/minimu9.h"

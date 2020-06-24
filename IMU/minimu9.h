@@ -45,11 +45,9 @@ namespace minimu9
     virtual float get_acc_scale() const;
     virtual float get_gyro_scale() const;
 
-    virtual std::tuple<float,float,float> read_acc();
-   // virtual void read_acc(Vec* V);
- 
-    virtual std::tuple<float,float,float> read_mag();
-    virtual std::tuple<float,float,float> read_gyro();
+    virtual vector read_acc();
+    virtual vector read_mag();
+    virtual vector read_gyro();
 
     virtual void enable();
     virtual void load_calibration();

@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
 
-typedef vector std::vector<float>;
 
 class imu
 {

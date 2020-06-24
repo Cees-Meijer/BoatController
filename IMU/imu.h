@@ -1,15 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <tuple>
+#include "vector.h"
 
-
-typedef struct _Vec
-{
-	float X;
-	float Y;
-	float Z;
-}Vec;
 
 class imu
 {
@@ -35,19 +28,17 @@ public:
   // TODO: remove stuff below this point
 
   // Scaled readings
-  virtual std::tuple<float,float,float>read_mag() = 0;  // In body coords, scaled to -1..1 range
-  virtual std::tuple<float,float,float>read_acc() = 0;  // In body coords, with units = g
- // virtual void read_acc(Vec*);  // In body coords, with units = g
-
-  virtual std::tuple<float,float,float>read_gyro() = 0; // In body coords, with units = rad/sec
+  virtual vector read_mag() = 0;  // In body coords, scaled to -1..1 range
+  virtual vector read_acc() = 0;  // In body coords, with units = g
+  virtual vector read_gyro() = 0; // In body coords, with units = rad/sec
   void read(){ read_mag(); read_acc(); read_gyro(); }
 
   virtual void measure_offsets() = 0;
   virtual void enable() = 0;
   virtual void load_calibration() = 0;
 
-  long gyro_offset[3];
-  std::tuple<int,int,int> mag_min, mag_max;
+  vector gyro_offset;
+  int_vector mag_min, mag_max;
 
 
 };

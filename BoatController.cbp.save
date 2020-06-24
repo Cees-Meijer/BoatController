@@ -13,7 +13,13 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add directory="/home/pi/Projects/BoatController/" />
+					<Add directory="../IMU/IMU" />
+					<Add directory="MAVLink" />
 				</Compiler>
+				<Linker>
+					<Add library="pigpio" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/BoatController" prefix_auto="1" extension_auto="1" />
@@ -37,6 +43,21 @@
 			<Add library="libgps" />
 			<Add directory="../gpsd" />
 		</Linker>
+		<Unit filename="IMU/i2c_bus.cpp" />
+		<Unit filename="IMU/i2c_bus.h" />
+		<Unit filename="IMU/imu.h" />
+		<Unit filename="IMU/l3g.cpp" />
+		<Unit filename="IMU/l3g.h" />
+		<Unit filename="IMU/lis3mdl.cpp" />
+		<Unit filename="IMU/lis3mdl.h" />
+		<Unit filename="IMU/lsm303.cpp" />
+		<Unit filename="IMU/lsm303.h" />
+		<Unit filename="IMU/lsm6.cpp" />
+		<Unit filename="IMU/lsm6.h" />
+		<Unit filename="IMU/minimu9.cpp" />
+		<Unit filename="IMU/minimu9.h" />
+		<Unit filename="TinyGPS.cpp" />
+		<Unit filename="TinyGPS.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />

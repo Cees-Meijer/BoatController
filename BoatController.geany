@@ -28,18 +28,17 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=7
-FILE_NAME_0=531;C++;0;EUTF-8;1;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FBoatController.h;0;4
-FILE_NAME_1=868;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2Fmain.cpp;0;3
-FILE_NAME_2=1053;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FTinyGPS.cpp;0;2
-FILE_NAME_3=976;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FTinyGPS.h;0;3
-FILE_NAME_4=69;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Flsm6.h;0;4
-FILE_NAME_5=34;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Flis3mdl.h;0;4
-FILE_NAME_6=344;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fminimu9.h;0;4
-FILE_NAME_7=178;Make;0;EUTF-8;1;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2Fmakefile;0;4
-FILE_NAME_8=9842;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fminimu9.cpp;0;2
-FILE_NAME_9=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2Fminimu9-ahrs%2Fminimu9.cpp;0;2
-FILE_NAME_10=985;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fimu.h;0;2
+current_page=8
+FILE_NAME_0=329;C++;0;EUTF-8;1;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FBoatController.h;0;4
+FILE_NAME_1=2017;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2Fmain.cpp;0;3
+FILE_NAME_2=452;Make;0;EUTF-8;1;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2Fmakefile;0;4
+FILE_NAME_3=15;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fminimu9.cpp;0;2
+FILE_NAME_4=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fminimu9.h;0;4
+FILE_NAME_5=277;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fimu.h;0;2
+FILE_NAME_6=35;None;0;EUTF-8;1;1;0;%2Fusr%2Finclude%2Feigen3%2FEigen%2FEigen;0;4
+FILE_NAME_7=0;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2Fminimu9-ahrs%2Fminimu9.h;0;4
+FILE_NAME_8=125;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2Fminimu9-ahrs%2Fminimu9-ahrs.cpp;0;2
+FILE_NAME_9=246;C++;0;EUTF-8;0;1;0;%2Fhome%2Fpi%2FProjects%2FBoatController%2FIMU%2Fvector.h;0;4
 
 [VTE]
 last_dir=/home/pi
