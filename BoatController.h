@@ -24,5 +24,6 @@
 #include <system_error>
 #include <chrono>
 
-int SendGPS(TinyGPSPlus *gps );
+int SendGPS(TinyGPSPlus *gps,float yaw );
+int SendHeartBeat();
 
