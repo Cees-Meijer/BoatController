@@ -26,4 +26,4 @@
 
 int SendGPS(TinyGPSPlus *gps,float yaw );
 int SendHeartBeat();
-
+int SendParams();

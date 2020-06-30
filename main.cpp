@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
   auto start = std::chrono::steady_clock::now();
    printf("Controller started. Waiting for GPS fix...\r\n");
   auto heartbeat_timer = start;
+  int MAVByteCount=0;
    while(true)
    {
     auto last_start = start;
@@ -94,10 +95,27 @@ int main(int argc, char *argv[])
           //serWrite(fd,serial_msg,strnlen(serial_msg,1024));
            
           }
-          
-       printf("%c",serial_buff[i]);
+
+       //printf("%c",serial_buff[i]);
        serWrite(fd,(char*)&serial_buff[i],1);
        }
+      }
+      
+   chars_read = serDataAvailable(fd);
+   if (chars_read>0){
+      serRead(fd,serial_buff,chars_read);
+      for(int i=0;i<chars_read;i++)
+       { if(serial_buff[i] == 0xFD){printf("\r\n");MAVByteCount =0;}
+          printf("%02X ",serial_buff[i]); 
+          if(MAVByteCount == 7 && serial_buff[i]==0x15)
+          {
+             SendParams();
+             printf("Sending Params\r\n");
+          }
+          MAVByteCount++;
+          }
+       
+       fflush(stdout);
       }
     try
      {  
@@ -108,6 +126,24 @@ int main(int argc, char *argv[])
    gpioTerminate();
 }
 
+int SendParams()
+{
+   char param_id[]="PARAM1";
+   float param_value = 1.2;
+    uint8_t param_type = 0;
+     uint16_t param_count =1;
+     uint16_t param_index =0;
+    
+   mavlink_msg_param_value_pack(system_id,component_id, &msg,
+                               param_id, param_value, param_type, param_count, param_index);
+   uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+
+   serWrite(fd,(char*)buf,len);
+   return len;
+                               
+}
+
+// MAVLink Heartbeat ID=0. Len = 21 Bytes.
 int SendHeartBeat()
 {
    uint8_t base_mode = MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
@@ -123,6 +159,7 @@ int SendHeartBeat()
 
 int SendGPS(TinyGPSPlus *gps,float heading )
 {
+  
  uint64_t time_usec = gps->location.time_tag() * 1000;
  uint8_t fix_type = 3;
  int32_t lat = (int32_t)(gps->location.lat()*1e7);
@@ -141,7 +178,7 @@ int SendGPS(TinyGPSPlus *gps,float heading )
  uint32_t vel_acc = 0;
  uint32_t hdg_acc = 1e5 ; //1 Degree
  uint16_t yaw = (uint16_t)(heading*100.0);
- 
+
 
  mavlink_msg_gps_raw_int_pack(system_id, component_id, &msg,
                               time_usec, fix_type,lat,lon, alt, eph, epv,vel, cog,satellites_visible, alt_ellipsoid, h_acc, v_acc, vel_acc, hdg_acc, yaw);
@@ -152,8 +189,8 @@ int SendGPS(TinyGPSPlus *gps,float heading )
  uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
 
  serWrite(fd,(char*)buf,len);
- mavlink_gps2_raw_t gps2_raw;
- mavlink_msg_gps2_raw_decode(&msg, &gps2_raw);
- //printf("Lat:%d, Lon:%d", gps2_raw.lat,gps2_raw.lon );
+ mavlink_gps_raw_int_t gps_raw;
+ mavlink_msg_gps_raw_int_decode(&msg, &gps_raw);
+ //printf("Lat:%d, Lon:%d, Yaw:%d\r\n", gps_raw.lat,gps_raw.lon,gps_raw.yaw );
 return len;
 }
