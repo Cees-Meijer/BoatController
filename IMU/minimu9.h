@@ -21,7 +21,8 @@ namespace minimu9
     lis3mdl::comm_config lis3mdl;
     lsm6::comm_config lsm6;
   };
-
+  matrix rotation_from_compass(const vector & acceleration, const vector & magnetic_field);
+  void rotate(quaternion & rotation, const vector & w, float dt);
   comm_config auto_detect(const std::string & i2c_bus_name);
 
   sensor_set config_sensor_set(const comm_config &);
@@ -31,7 +32,8 @@ namespace minimu9
   class handle : public imu {
   public:
     void open(const comm_config &);
-
+    void fuse(quaternion & rotation, float dt, const vector & angular_velocity,
+              const vector & acceleration, const vector & magnetic_field);
     comm_config config;
     lsm6::handle lsm6;
     lis3mdl::handle lis3mdl;

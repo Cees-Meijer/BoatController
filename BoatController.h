@@ -23,7 +23,12 @@
 #include <math.h>
 #include <system_error>
 #include <chrono>
+// Converts degrees to radians.
+#define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
 
+// Converts radians to degrees.
+#define radiansToDegrees(angleRadians) (angleRadians * 180.0 / M_PI)
 int SendGPS(TinyGPSPlus *gps,float yaw );
 int SendHeartBeat();
 int SendParams();
+int SendAttitude( float roll, float pitch, float yaw, vector angular_velocity);

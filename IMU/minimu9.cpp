@@ -400,3 +400,61 @@ vector minimu9::handle::read_gyro()
   read_gyro_raw();
   return (vector_from_ints(&g) - gyro_offset) * get_gyro_scale();
 }
+
+// Uses the given angular velocity and time interval to calculate
+// a rotation and applies that rotation to the given quaternion.
+// w is angular velocity in radians per second.
+// dt is the time.
+void minimu9::rotate(quaternion & rotation, const vector & w, float dt)
+{
+  // Multiply by first order approximation of the
+  // quaternion representing this rotation.
+  rotation *= quaternion(1, w(0)*dt/2, w(1)*dt/2, w(2)*dt/2);
+  rotation.normalize();
+}
+
+//! Uses the acceleration and magnetic field readings from the compass
+// to get a noisy estimate of the current rotation matrix.
+// This function is where we define the coordinate system we are using
+// for the ground coords:  North, East, Down.
+matrix minimu9::rotation_from_compass(const vector & acceleration, const vector & magnetic_field)
+{
+  vector down = -acceleration;     // usually true
+  vector east = down.cross(magnetic_field); // actually it's magnetic east
+  vector north = east.cross(down);
+
+  east.normalize();
+  north.normalize();
+  down.normalize();
+
+  matrix r;
+  r.row(0) = north;
+  r.row(1) = east;
+  r.row(2) = down;
+  return r;
+}
+void minimu9::handle::fuse(quaternion & rotation, float dt, const vector & angular_velocity,
+  const vector & acceleration, const vector & magnetic_field)
+{
+  vector correction = vector(0, 0, 0);
+
+  if (fabs(acceleration.norm() - 1) <= 0.3)
+  {
+    // The magnetidude of acceleration is close to 1 g, so
+    // it might be pointing up and we can do drift correction.
+
+    const float correction_strength = 1;
+
+    matrix rotation_compass = rotation_from_compass(acceleration, magnetic_field);
+    matrix rotation_matrix = rotation.toRotationMatrix();
+
+    correction = (
+      rotation_compass.row(0).cross(rotation_matrix.row(0)) +
+      rotation_compass.row(1).cross(rotation_matrix.row(1)) +
+      rotation_compass.row(2).cross(rotation_matrix.row(2))
+      ) * correction_strength;
+
+  }
+
+  rotate(rotation, angular_velocity + correction, dt);
+}

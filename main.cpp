@@ -50,13 +50,18 @@ int main(int argc, char *argv[])
   // to ground coordinates when it its changed to a matrix.
   quaternion rotation = quaternion::Identity();
 
-  // Set up a timer that expires every 20 ms.
+  // Set up a timer that expires every 200 ms.
   pacer loop_pacer;
   loop_pacer.set_period_ns(20000000);
   auto start = std::chrono::steady_clock::now();
    printf("Controller started. Waiting for GPS fix...\r\n");
   auto heartbeat_timer = start;
+  auto attitude_timer = start;
   int MAVByteCount=0;
+  float north_total =0;float east_total =0; float roll_total = 0; float pitch_total=0;
+  int attitude_samples =0; 
+  vector angular_velocity_total;
+   angular_velocity_total << 0,0,0;
    while(true)
    {
     auto last_start = start;
@@ -69,9 +74,10 @@ int main(int argc, char *argv[])
        heartbeat_timer = start;
        }
 
-    vector angular_velocity = imu.read_gyro();
-    vector acceleration = imu.read_acc();
-    vector magnetic_field = imu.read_mag();
+    vector angular_velocity = imu.read_gyro(); // Degrees/s
+    
+    vector acceleration = imu.read_acc(); 
+    vector magnetic_field = imu.read_mag(); 
     imu.fuse(rotation, dt, angular_velocity, acceleration, magnetic_field);
     float nx= acceleration(0);float ny = acceleration(1);float nz = acceleration(2);
     float roll =atan2(ny, nz)*60;
@@ -79,10 +85,27 @@ int main(int argc, char *argv[])
     matrix m = rotation.toRotationMatrix();
     float northx = m(0,0);
     float eastx =  m(1,0);
-    float heading = atan2(northx,eastx)*(180 / M_PI) - 90;
-    if (heading < 0) heading += 360;
-    //printf("LAT=%f, LON=%f, Age:%05lld, Roll:%.2f,Pitch:%.2f,Heading:%.2f\r",gps->location.lat(),gps->location.lng(),gps->location.age(),roll,pitch,heading);
-
+    float yaw = atan2(eastx,northx);
+    float heading_deg = yaw*(180 / M_PI);
+   // if (heading_deg > 360) heading_deg -= 360;
+    
+    angular_velocity_total += angular_velocity;
+    north_total +=northx;east_total += eastx;
+    roll_total += roll; pitch_total += pitch;
+    attitude_samples++;
+    duration =  start-attitude_timer ;
+    if(duration.count()>5e8){
+       roll = roll_total / attitude_samples;
+       pitch = pitch_total / attitude_samples;
+       northx = north_total /  attitude_samples;
+       eastx = east_total /  attitude_samples;
+       yaw = atan2(eastx,northx);
+       angular_velocity = angular_velocity_total / attitude_samples;
+       SendAttitude( roll, pitch, yaw, angular_velocity);
+       north_total =0; east_total =0;  roll_total = 0;  pitch_total=0; attitude_samples =0; angular_velocity_total << 0,0,0;
+       attitude_timer = start;
+       printf("LAT=%f, LON=%f, Age:%05lld, Roll:%.2f,Pitch:%.2f,Yaw:%.2f,Heading:%.2f\r\n",gps->location.lat(),gps->location.lng(),gps->location.age(),roll,pitch,yaw,heading_deg);
+       }
     chars_read=gpioSerialRead(18,serial_buff,1024);
     if(chars_read>0){
       for(int i=0;i<chars_read;i++)
@@ -91,8 +114,9 @@ int main(int argc, char *argv[])
        if(gps->location.isUpdated()){
          // sprintf(serial_msg,"LAT=%f, LON=%f, Age:%lld, Heading:%f, Speed:%f\r\n",gps->location.lat(),gps->location.lng(),gps->location.age(),gps->course.deg(),gps->speed.mps());
          // printf("%s",serial_msg);
-          SendGPS(gps,heading);
+          SendGPS(gps,heading_deg);
           //serWrite(fd,serial_msg,strnlen(serial_msg,1024));
+
            
           }
 
@@ -142,6 +166,25 @@ int SendParams()
    return len;
                                
 }
+
+int SendAttitude( float roll_deg,float pitch_deg,float yaw,vector angular_velocity)
+{
+   //printf("ATT\r\n");
+   uint32_t time_boot_ms=timeSinceEpochMillisec();
+   float roll = degreesToRadians(roll_deg);
+   float pitch = degreesToRadians(pitch_deg);
+   float rollspeed = degreesToRadians(angular_velocity(0));
+   float pitchspeed= degreesToRadians(angular_velocity(1));
+   float yawspeed= degreesToRadians(angular_velocity(2));
+   
+    mavlink_msg_attitude_pack(system_id, component_id, &msg,
+                               time_boot_ms, roll, pitch, yaw, rollspeed, pitchspeed, yawspeed);
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+
+   serWrite(fd,(char*)buf,len);
+   return len;
+}
+
 
 // MAVLink Heartbeat ID=0. Len = 21 Bytes.
 int SendHeartBeat()
