@@ -9,30 +9,48 @@
 
 using namespace std;
 char serial_port[]="/dev/ttyS0";
+char serial_port_sonar[]="/dev/ttyUSB0";
+
+// ST Sonar settings
+ST_Sonar ST;
+ST_Sonar::EchoDataType E;
+bool SonarAvailable = false;
+ 
 
 uint64_t timeSinceEpochMillisec() {
   using namespace std::chrono;
   return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
- // Initialize the required buffers
+ // MAVLink initialisation
   mavlink_message_t msg;
   uint8_t buf[MAVLINK_MAX_PACKET_LEN];
   uint8_t system_id = 1; // id of computer which is sending the command (ground control software has id of 255, system = 1)
   uint8_t component_id = 2; // seems like it can be any # except the number of what Pixhawk sys_id is
   uint8_t target_system = 1; // Id # of Pixhawk (should be 1)
   uint8_t target_component = 0; // Target component, 0 = all (seems to work with 0 or 1)
+  mavlink_status_t status;
+  int chan = MAVLINK_COMM_0;
+
   int fd;
+  
+  TinyGPSPlus *gps = new TinyGPSPlus();
+  char serial_buff[1024];
+  char serial_msg[1024];
+  int chars_read =0;
+  
+  std::map<std::string, int> parameters;
+ 
+  
 int main(int argc, char *argv[])
 {
 
-   TinyGPSPlus *gps = new TinyGPSPlus();
-   char serial_buff[1024];
-   char serial_msg[1024];
-   int chars_read =0;
 
    if (gpioInitialise() < 0) return 1;
+   InitParameters();
 
+   SonarAvailable = InitSonar(); 
+   
    gpioSerialReadOpen(18,9600,8);
    fd = serOpen(serial_port, 9600,0);
 
@@ -50,11 +68,11 @@ int main(int argc, char *argv[])
   // to ground coordinates when it its changed to a matrix.
   quaternion rotation = quaternion::Identity();
 
-  // Set up a timer that expires every 200 ms.
+  // Set up a timer that expires every 10 ms.
   pacer loop_pacer;
-  loop_pacer.set_period_ns(20000000);
+  loop_pacer.set_period_ns(10000000);
   auto start = std::chrono::steady_clock::now();
-   printf("Controller started. Waiting for GPS fix...\r\n");
+  printf("Controller started. Waiting for GPS fix...\r\n");
   auto heartbeat_timer = start;
   auto attitude_timer = start;
   int MAVByteCount=0;
@@ -62,6 +80,7 @@ int main(int argc, char *argv[])
   int attitude_samples =0; 
   vector angular_velocity_total;
    angular_velocity_total << 0,0,0;
+   
    while(true)
    {
     auto last_start = start;
@@ -87,13 +106,21 @@ int main(int argc, char *argv[])
     float eastx =  m(1,0);
     float yaw = atan2(eastx,northx);
     float heading_deg = yaw*(180 / M_PI);
-   // if (heading_deg > 360) heading_deg -= 360;
     
     angular_velocity_total += angular_velocity;
     north_total +=northx;east_total += eastx;
     roll_total += roll; pitch_total += pitch;
     attitude_samples++;
-    duration =  start-attitude_timer ;
+     
+    chars_read=gpioSerialRead(18,serial_buff,1024);
+    if(chars_read>0){
+      for(int i=0;i<chars_read;i++)
+       {
+       gps->encode(serial_buff[i]);
+       }
+      }
+    duration =  start-attitude_timer;    
+    // 5e8 = 500 mS
     if(duration.count()>5e8){
        roll = roll_total / attitude_samples;
        pitch = pitch_total / attitude_samples;
@@ -101,46 +128,50 @@ int main(int argc, char *argv[])
        eastx = east_total /  attitude_samples;
        yaw = atan2(eastx,northx);
        angular_velocity = angular_velocity_total / attitude_samples;
-       SendAttitude( roll, pitch, yaw, angular_velocity);
+       SendAttitude( roll, pitch, yaw, angular_velocity);        
+       SendGPS(gps,heading_deg);
+         
+     //  printf("LAT=%f, LON=%f, Age:%05lld, Roll:%.2f,Pitch:%.2f,Yaw:%.2f,Heading:%.2f,Samples:%d\r\n",gps->location.lat(),gps->location.lng(),gps->location.age(),roll,pitch,yaw,heading_deg,attitude_samples);
        north_total =0; east_total =0;  roll_total = 0;  pitch_total=0; attitude_samples =0; angular_velocity_total << 0,0,0;
        attitude_timer = start;
-       printf("LAT=%f, LON=%f, Age:%05lld, Roll:%.2f,Pitch:%.2f,Yaw:%.2f,Heading:%.2f\r\n",gps->location.lat(),gps->location.lng(),gps->location.age(),roll,pitch,yaw,heading_deg);
        }
-    chars_read=gpioSerialRead(18,serial_buff,1024);
-    if(chars_read>0){
-      for(int i=0;i<chars_read;i++)
+      if (SonarAvailable)
        {
-       gps->encode(serial_buff[i]);
-       if(gps->location.isUpdated()){
-         // sprintf(serial_msg,"LAT=%f, LON=%f, Age:%lld, Heading:%f, Speed:%f\r\n",gps->location.lat(),gps->location.lng(),gps->location.age(),gps->course.deg(),gps->speed.mps());
-         // printf("%s",serial_msg);
-          SendGPS(gps,heading_deg);
-          //serWrite(fd,serial_msg,strnlen(serial_msg,1024));
-
-           
-          }
-
-       //printf("%c",serial_buff[i]);
-       serWrite(fd,(char*)&serial_buff[i],1);
+          ST.Scan(&E); 
+          SendDistance(E, roll, pitch, yaw );
        }
-      }
-      
-   chars_read = serDataAvailable(fd);
-   if (chars_read>0){
-      serRead(fd,serial_buff,chars_read);
-      for(int i=0;i<chars_read;i++)
-       { if(serial_buff[i] == 0xFD){printf("\r\n");MAVByteCount =0;}
-          printf("%02X ",serial_buff[i]); 
-          if(MAVByteCount == 7 && serial_buff[i]==0x15)
-          {
+        
+      // Check for MAVLink data
+      uint8_t stream_id=0;
+      uint16_t value =0;
+      char id[16];
+      while(serDataAvailable(fd) > 0)
+      {
+      uint8_t byte;
+      byte = serReadByte(fd);
+
+      if (mavlink_parse_char(chan, byte, &msg, &status))
+         {
+         printf("Received message with ID %d, sequence: %d from component %d of system %d\n", msg.msgid, msg.seq, msg.compid, msg.sysid);
+
+         switch (msg.msgid) {
+	        case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:  
+             printf("- REQUEST_LIST- \r\n");
              SendParams();
-             printf("Sending Params\r\n");
-          }
-          MAVByteCount++;
-          }
-       
-       fflush(stdout);
+           break;
+           case MAVLINK_MSG_ID_REQUEST_DATA_STREAM:
+            stream_id = mavlink_msg_request_data_stream_get_req_stream_id(&msg);
+            printf("- REQUEST_DATASTREAM: %d \r\n", stream_id);
+           break;
+           
+           case MAVLINK_MSG_ID_PARAM_SET:
+            SetParameter( msg);
+           break;
+           
+           } 
+         }
       }
+  
     try
      {  
      loop_pacer.pace();
@@ -150,21 +181,101 @@ int main(int argc, char *argv[])
    gpioTerminate();
 }
 
+bool InitSonar()
+{
+  ST.Params.InitialGain = 50;//0-255
+  ST.Params.GainIncrement = 60; //0-255
+  ST.Params.LockOut= 60;// Lockout time in 1.96uS [0-65535]
+  ST.Params.ScaleDenom=11184 ;
+  ST.Params.RangeUnits=1;       // 0=cm, 1= mm units
+  ST.Params.MaxDistance = 5000; //Max distance in range units
+  ST.Params.TimeOut=ST.Params.MaxDistance;
+
+if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1) 
+    {
+     printf("Error opening Serial port for Sonar");
+     return false;
+    }
+    else
+    { 
+     
+       if (ST.EstablishCentre())
+         {
+         ST.EstablishCentre();
+         ST.SetStepSize(ST.STEP_HALF);
+         ST.UpdateParams();
+         ST.Start(60,300);
+         }else{return false;}
+    }
+    return true;
+ }
+
+uint16_t SendDistance(ST_Sonar::EchoDataType E, float roll, float pitch, float yaw)
+{
+   uint32_t time_boot_ms = E.Time;
+   uint16_t min_distance=0;
+   uint16_t max_distance=1000;
+   uint16_t current_distance = E.Range;
+   uint8_t type = MAV_DISTANCE_SENSOR_ULTRASOUND;
+   uint8_t id=0;
+   uint8_t orientation=MAV_SENSOR_ROTATION_PITCH_270;
+   uint8_t covariance =0;
+   float horizontal_fov =0;
+   float vertical_fov=E.Angle;
+   float quaternion[]={0,0,0,0};
+   uint8_t signal_quality=0;
+   quaternion[0]=roll;
+   quaternion[1]=pitch;
+   quaternion[2]=yaw;  
+       
+   mavlink_msg_distance_sensor_pack(system_id, component_id,&msg,
+                               time_boot_ms, min_distance, max_distance,current_distance,  type, id, orientation,  covariance,  horizontal_fov, vertical_fov, quaternion, signal_quality);
+   uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+   serWrite(fd,(char*)buf,len);
+   return len;
+}
+
 int SendParams()
 {
-   char param_id[]="PARAM1";
-   float param_value = 1.2;
-    uint8_t param_type = 0;
-     uint16_t param_count =1;
-     uint16_t param_index =0;
+   char param_id[MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN];
+   float param_value = 0;
+    uint8_t param_type = MAV_PARAM_TYPE_REAL32;
+    uint16_t param_count =parameters.size();
+    uint16_t param_index =0;
+    uint16_t len=0;
+   for(auto& x : parameters)
+   {
+    std::cout << x.first << "," << x.second << std::endl;
+    std::string S = x.first;
+    strcpy(param_id,S.c_str()); 
+
+    param_value = (float)x.second;
     
    mavlink_msg_param_value_pack(system_id,component_id, &msg,
                                param_id, param_value, param_type, param_count, param_index);
+   param_index++;
+   len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+
+   serWrite(fd,(char*)buf,len);
+   }
+   return len;
+                               
+}
+
+int SendData()
+{
+   
+   uint8_t data[MAVLINK_MSG_ENCAPSULATED_DATA_FIELD_DATA_LEN];
+   static uint16_t seqnr;
+   for(int i=0;i<MAVLINK_MSG_ENCAPSULATED_DATA_FIELD_DATA_LEN;i++){data[i]=i;}
+   seqnr++;
+   mavlink_msg_encapsulated_data_pack(system_id, component_id, &msg,
+                                seqnr,data);
    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
 
    serWrite(fd,(char*)buf,len);
    return len;
-                               
+                           
 }
 
 int SendAttitude( float roll_deg,float pitch_deg,float yaw,vector angular_velocity)
@@ -236,4 +347,27 @@ int SendGPS(TinyGPSPlus *gps,float heading )
  mavlink_msg_gps_raw_int_decode(&msg, &gps_raw);
  //printf("Lat:%d, Lon:%d, Yaw:%d\r\n", gps_raw.lat,gps_raw.lon,gps_raw.yaw );
 return len;
+}
+void SetParameter(mavlink_message_t m_msg)
+{
+    char id[16];
+    uint16_t value = mavlink_msg_param_set_get_param_value(&m_msg);
+    mavlink_msg_param_set_get_param_id(&m_msg,id);
+    parameters[id] = value;
+    printf("SET PARAMETER %s to %d \r\n",id,value);
+    mavlink_msg_param_value_pack(system_id, component_id, &msg,
+                               id, (float)value, uint8_t param_type, uint16_t param_count, uint16_t param_index)
+}
+
+void InitParameters()
+{
+  
+  
+   parameters["InitialGain"] = 50;
+   parameters["GainIncrement"] = 60;
+   parameters["LockOut"] = 60;
+   parameters["ScaleDenom"] = 11184;
+   parameters["RangeUnits"] = 1;  
+   parameters["MaxDistance"] = 5000;
+
 }

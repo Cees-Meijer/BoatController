@@ -13,6 +13,7 @@
 #include "./IMU/exceptions.h"
 #include "./IMU/pacer.h"
 #include "./IMU/imu.h"
+#include "./Sonar/ST_Sonar.h"
 #include <iostream>
 #include <iomanip>
 #include <stdio.h>
@@ -23,6 +24,7 @@
 #include <math.h>
 #include <system_error>
 #include <chrono>
+#include <map>
 // Converts degrees to radians.
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
 
@@ -32,3 +34,8 @@ int SendGPS(TinyGPSPlus *gps,float yaw );
 int SendHeartBeat();
 int SendParams();
 int SendAttitude( float roll, float pitch, float yaw, vector angular_velocity);
+int SendData();
+uint16_t SendDistance(ST_Sonar::EchoDataType E,float roll,float pitch, float yaw);
+bool InitSonar();
+void InitParameters();
+void SetParameter(mavlink_message_t msg);
