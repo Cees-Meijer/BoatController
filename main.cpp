@@ -6,6 +6,7 @@
 
 
 #include "BoatController.h"
+#define SIMULATE_SONAR 1
 
 using namespace std;
 char serial_port[]="/dev/ttyS0";
@@ -75,6 +76,7 @@ int main(int argc, char *argv[])
   printf("Controller started. Waiting for GPS fix...\r\n");
   auto heartbeat_timer = start;
   auto attitude_timer = start;
+  auto sonar_timer = start;
   int MAVByteCount=0;
   float north_total =0;float east_total =0; float roll_total = 0; float pitch_total=0;
   int attitude_samples =0; 
@@ -135,10 +137,19 @@ int main(int argc, char *argv[])
        north_total =0; east_total =0;  roll_total = 0;  pitch_total=0; attitude_samples =0; angular_velocity_total << 0,0,0;
        attitude_timer = start;
        }
-      if (SonarAvailable)
-       {
+       
+       duration =  start-sonar_timer; 
+       //2e8 = 200 ms, sonar 5 pings / s   
+       if(duration.count()>2e8){
+#ifdef SIMULATE_SONAR
+ SonarAvailable = true;
+#endif
+       if (SonarAvailable)
+        {
           ST.Scan(&E); 
           SendDistance(E, roll, pitch, yaw );
+        }
+        sonar_timer = start;
        }
         
       // Check for MAVLink data
@@ -210,26 +221,18 @@ if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1)
     return true;
  }
 
-uint16_t SendDistance(ST_Sonar::EchoDataType E, float roll, float pitch, float yaw)
+uint16_t SendDistance(ST_Sonar::EchoDataType E, float f_roll, float f_pitch, float f_yaw)
 {
    uint32_t time_boot_ms = E.Time;
-   uint16_t min_distance=0;
-   uint16_t max_distance=1000;
-   uint16_t current_distance = E.Range;
-   uint8_t type = MAV_DISTANCE_SENSOR_ULTRASOUND;
-   uint8_t id=0;
-   uint8_t orientation=MAV_SENSOR_ROTATION_PITCH_270;
-   uint8_t covariance =0;
-   float horizontal_fov =0;
-   float vertical_fov=E.Angle;
-   float quaternion[]={0,0,0,0};
-   uint8_t signal_quality=0;
-   quaternion[0]=roll;
-   quaternion[1]=pitch;
-   quaternion[2]=yaw;  
-       
-   mavlink_msg_distance_sensor_pack(system_id, component_id,&msg,
-                               time_boot_ms, min_distance, max_distance,current_distance,  type, id, orientation,  covariance,  horizontal_fov, vertical_fov, quaternion, signal_quality);
+   uint16_t range=E.Range;
+   uint16_t angle = (uint16_t)(E.Angle*10);
+   uint16_t roll = (uint16_t) (f_roll*10);
+   uint16_t pitch = (uint16_t)(f_pitch*10);
+   uint16_t yaw = (uint16_t) (f_yaw*10);
+   
+   mavlink_msg_scanning_sonar_pack(system_id, component_id,&msg,
+                               time_boot_ms, range, angle, roll,pitch,yaw);
+   printf("Sonar:T:%ld R:%d, A: %d\r\n",time_boot_ms,range,angle);
    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
    serWrite(fd,(char*)buf,len);
    return len;
@@ -352,11 +355,16 @@ void SetParameter(mavlink_message_t m_msg)
 {
     char id[16];
     uint16_t value = mavlink_msg_param_set_get_param_value(&m_msg);
+    uint8_t param_type = mavlink_msg_param_set_get_param_type(&m_msg);
     mavlink_msg_param_set_get_param_id(&m_msg,id);
     parameters[id] = value;
     printf("SET PARAMETER %s to %d \r\n",id,value);
     mavlink_msg_param_value_pack(system_id, component_id, &msg,
-                               id, (float)value, uint8_t param_type, uint16_t param_count, uint16_t param_index)
+                               id, value, param_type, 1, 1);
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+
+    serWrite(fd,(char*)buf,len);
+                               
 }
 
 void InitParameters()

@@ -259,15 +259,19 @@ if (Ok && (DetectedEdge==Edge)){return true;} else {return false;}
 
 uint ST_Sonar::Scan(EchoDataType *EchoData)
 {
-
-time_t T = time(0);   // get time now
-
-ScannerPort.flushReceiver();
  scanState S = SCANNING;
  EchoRangeType Echo;
- ScannerPort.writeChar(ScanDirection); // Step, and take a range-measurement
- T=time(0);
+time_t T = time(0);   // get time now
+
+#ifndef SIMULATE_SONAR
+ ScannerPort.flushReceiver();
+ ScannerPort.writeChar(ScanDirection); // Step, and take a range-measurement 
  ScannerPort.readBytes(&Echo,sizeof(Echo));
+#endif
+#ifdef SIMULATE_SONAR
+ Echo.Range = 1000 + Position;
+#endif
+ T=time(0);
  EchoData->Time=T;
  EchoData->Angle=(Position*StepAngleDegrees);
  EchoData->Range=Echo.Range;
