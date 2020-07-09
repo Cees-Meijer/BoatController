@@ -8,7 +8,9 @@
 #include "BoatController.h"
 #define SIMULATE_SONAR 1
 
-using namespace std;
+using namespace std; 
+using namespace std::chrono;
+
 char serial_port[]="/dev/ttyS0";
 char serial_port_sonar[]="/dev/ttyUSB0";
 
@@ -19,7 +21,7 @@ bool SonarAvailable = false;
  
 
 uint64_t timeSinceEpochMillisec() {
-  using namespace std::chrono;
+
   return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
@@ -46,7 +48,7 @@ uint64_t timeSinceEpochMillisec() {
 int main(int argc, char *argv[])
 {
 
-
+   program_start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
    if (gpioInitialise() < 0) return 1;
    InitParameters();
 
@@ -223,9 +225,9 @@ if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1)
 
 uint16_t SendDistance(ST_Sonar::EchoDataType E, float f_roll, float f_pitch, float f_yaw)
 {
-   uint32_t time_boot_ms = E.Time;
-   uint16_t range=E.Range;
-   uint16_t angle = (uint16_t)(E.Angle*10);
+   uint32_t time_boot_ms = E.timetag_ms;
+   uint16_t range = E.Range;
+   uint16_t angle = E.Angle;
    uint16_t roll = (uint16_t) (f_roll*10);
    uint16_t pitch = (uint16_t)(f_pitch*10);
    uint16_t yaw = (uint16_t) (f_yaw*10);

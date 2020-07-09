@@ -34,9 +34,9 @@ typedef struct{
  }EchoRangeType;
 #pragma pack()
 typedef struct{
- time_t Time;
- float Angle;
- unsigned short Range;
+ uint32_t timetag_ms; // milliseconds since startup
+ uint16_t Angle;      //in 0.1 degrees
+ uint16_t Range; // cm or mm, depending on setting sonar
  float X;
  float Y;
  }EchoDataType;

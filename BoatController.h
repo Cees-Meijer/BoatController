@@ -39,3 +39,4 @@ uint16_t SendDistance(ST_Sonar::EchoDataType E,float roll,float pitch, float yaw
 bool InitSonar();
 void InitParameters();
 void SetParameter(mavlink_message_t msg);
+uint64_t program_start_time;

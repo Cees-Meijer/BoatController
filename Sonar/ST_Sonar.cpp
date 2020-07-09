@@ -262,6 +262,9 @@ uint ST_Sonar::Scan(EchoDataType *EchoData)
  scanState S = SCANNING;
  EchoRangeType Echo;
 time_t T = time(0);   // get time now
+ struct timespec ts;
+ clock_gettime(CLOCK_MONOTONIC, &ts);
+ uint32_t timetag_ms = (uint32_t)((uint64_t)(ts.tv_nsec / 1000000) + ((uint64_t)ts.tv_sec * 1000ull));
 
 #ifndef SIMULATE_SONAR
  ScannerPort.flushReceiver();
@@ -272,8 +275,8 @@ time_t T = time(0);   // get time now
  Echo.Range = 1000 + Position;
 #endif
  T=time(0);
- EchoData->Time=T;
- EchoData->Angle=(Position*StepAngleDegrees);
+ EchoData->timetag_ms=timetag_ms;
+ EchoData->Angle=(uint16_t)(Position*StepAngleDegrees)*10;
  EchoData->Range=Echo.Range;
  //printf("%ld,%0.1f,%d,%d\r\n" ,T,EchoData->Angle,EchoData->Range);
 
