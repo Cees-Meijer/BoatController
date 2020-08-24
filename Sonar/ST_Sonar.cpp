@@ -269,14 +269,14 @@ time_t T = time(0);   // get time now
 #ifndef SIMULATE_SONAR
  ScannerPort.flushReceiver();
  ScannerPort.writeChar(ScanDirection); // Step, and take a range-measurement 
- ScannerPort.readBytes(&Echo,sizeof(Echo));
+ ScannerPort.readBytes(&Echo,sizeof(Echo),15,100);
 #endif
 #ifdef SIMULATE_SONAR
  Echo.Range = 1000 + Position;
 #endif
  T=time(0);
  EchoData->timetag_ms=timetag_ms;
- EchoData->Angle=(uint16_t)(Position*StepAngleDegrees)*10;
+ EchoData->Angle=(uint16_t)((Position*StepAngleDegrees)*10);
  EchoData->Range=Echo.Range;
  //printf("%ld,%0.1f,%d,%d\r\n" ,T,EchoData->Angle,EchoData->Range);
 

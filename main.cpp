@@ -6,7 +6,7 @@
 
 
 #include "BoatController.h"
-#define SIMULATE_SONAR 1
+//#define SIMULATE_SONAR 1
 
 using namespace std; 
 using namespace std::chrono;
@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
    
    while(true)
    {
+
     auto last_start = start;
     start = std::chrono::steady_clock::now();
     std::chrono::nanoseconds duration = start - last_start;
@@ -141,11 +142,12 @@ int main(int argc, char *argv[])
        }
        
        duration =  start-sonar_timer; 
-       //2e8 = 200 ms, sonar 5 pings / s   
-       if(duration.count()>2e8){
+       //1e8 = 100 ms, sonar 10 pings / s   
+       if(duration.count()>1e8){
 #ifdef SIMULATE_SONAR
  SonarAvailable = true;
 #endif
+      //  printf("SONAR\r\n");
        if (SonarAvailable)
         {
           ST.Scan(&E); 
@@ -215,7 +217,7 @@ if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1)
        if (ST.EstablishCentre())
          {
          ST.EstablishCentre();
-         ST.SetStepSize(ST.STEP_HALF);
+         ST.SetStepSize(ST.STEP_FULL);
          ST.UpdateParams();
          ST.Start(60,300);
          }else{return false;}
@@ -311,7 +313,7 @@ int SendHeartBeat()
    mavlink_msg_heartbeat_pack( system_id, component_id, &msg,
                                	MAV_TYPE_SURFACE_BOAT, MAV_AUTOPILOT_GENERIC_WAYPOINTS_ONLY, base_mode, custom_mode, system_status);
    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
-
+   //printf("HeartB\r\n");
    serWrite(fd,(char*)buf,len);
    return len;
    }
