@@ -158,6 +158,8 @@ int main(int argc, char *argv[])
       // Check for MAVLink data
       uint8_t stream_id=0;
       uint16_t value =0;
+      uint16_t command = 0;
+      float param7 = 0;
       char id[16];
       while(serDataAvailable(fd) > 0)
       {
@@ -176,6 +178,12 @@ int main(int argc, char *argv[])
            case MAVLINK_MSG_ID_REQUEST_DATA_STREAM:
             stream_id = mavlink_msg_request_data_stream_get_req_stream_id(&msg);
             printf("- REQUEST_DATASTREAM: %d \r\n", stream_id);
+           break;
+           case MAVLINK_MSG_ID_COMMAND_LONG:
+            command = mavlink_msg_command_long_get_command(&msg);
+            SendCommandAck(command,0); // 0= MAV_RESULT_ACCEPTED
+            param7 = mavlink_msg_command_long_get_param7(&msg);
+            printf("- COMMAND LONG: %d, P7=%f \r\n", command,param7);
            break;
            
            case MAVLINK_MSG_ID_PARAM_SET:
@@ -236,7 +244,7 @@ uint16_t SendDistance(ST_Sonar::EchoDataType E, float f_roll, float f_pitch, flo
    
    mavlink_msg_scanning_sonar_pack(system_id, component_id,&msg,
                                time_boot_ms, range, angle, roll,pitch,yaw);
-   printf("Sonar:T:%ld R:%d, A: %d\r\n",time_boot_ms,range,angle);
+   //printf("Sonar:T:%ld R:%d, A: %d\r\n",time_boot_ms,range,angle);
    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
    serWrite(fd,(char*)buf,len);
    return len;
@@ -301,6 +309,20 @@ int SendAttitude( float roll_deg,float pitch_deg,float yaw,vector angular_veloci
 
    serWrite(fd,(char*)buf,len);
    return len;
+}
+
+int SendCommandAck(uint16_t command,uint8_t result)
+{
+   uint8_t progress = 0;
+   int32_t result_param2 = 0;
+
+   mavlink_msg_command_ack_pack(system_id,component_id,&msg,
+                               command, result, progress, result_param2,  target_system,  target_component); // target_system and target_component are defined globally.
+   uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);  // Send the message (.write sends as bytes)
+
+   serWrite(fd,(char*)buf,len);
+   return len;
+                               
 }
 
 
