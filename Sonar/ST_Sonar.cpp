@@ -265,11 +265,13 @@ time_t T = time(0);   // get time now
  struct timespec ts;
  clock_gettime(CLOCK_MONOTONIC, &ts);
  uint32_t timetag_ms = (uint32_t)((uint64_t)(ts.tv_nsec / 1000000) + ((uint64_t)ts.tv_sec * 1000ull));
+ int bytes=0;
 
 #ifndef SIMULATE_SONAR
  ScannerPort.flushReceiver();
  ScannerPort.writeChar(ScanDirection); // Step, and take a range-measurement 
- ScannerPort.readBytes(&Echo,sizeof(Echo),15,100);
+ bytes = ScannerPort.readBytes(&Echo,sizeof(Echo),15,100);
+ if (bytes<sizeof(Echo)){return (uint)SCAN_ERROR;}
 #endif
 #ifdef SIMULATE_SONAR
  Echo.Range = 1000 + Position;
@@ -298,6 +300,7 @@ else
  if (Position==1 && Echo.Reply != 't' && Echo.Reply !='T')
   {
    printf("Error in scanhead position.\r\n Restart to recenter.");
+   S=SCAN_ERROR;
   }
 
 return (uint)S;

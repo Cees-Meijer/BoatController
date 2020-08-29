@@ -6,7 +6,7 @@
 
 
 #include "BoatController.h"
-//#define SIMULATE_SONAR 1
+//#define SIMULATE_SONAR 1 
 
 using namespace std; 
 using namespace std::chrono;
@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
    
    while(true)
    {
-
     auto last_start = start;
     start = std::chrono::steady_clock::now();
     std::chrono::nanoseconds duration = start - last_start;
@@ -198,12 +197,13 @@ int main(int argc, char *argv[])
 
 bool InitSonar()
 {
-  ST.Params.InitialGain = 50;//0-255
-  ST.Params.GainIncrement = 60; //0-255
-  ST.Params.LockOut= 60;// Lockout time in 1.96uS [0-65535]
-  ST.Params.ScaleDenom=11184 ;
-  ST.Params.RangeUnits=1;       // 0=cm, 1= mm units
-  ST.Params.MaxDistance = 5000; //Max distance in range units
+   
+  ST.Params.InitialGain =     parameters["InitialGain"];   //0-255
+  ST.Params.GainIncrement =   parameters["GainIncrement"]; //0-255
+  ST.Params.LockOut=          parameters["LockOut"];       // Lockout time in 1.96uS [0-65535]
+  ST.Params.ScaleDenom=       parameters["ScaleDenom"] ;
+  ST.Params.RangeUnits=       parameters["RangeUnits"];    // 0=cm, 1= mm units
+  ST.Params.MaxDistance =     parameters["MaxDistance"]; //Max distance in range units
   ST.Params.TimeOut=ST.Params.MaxDistance;
 
 if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1) 
@@ -219,7 +219,7 @@ if((ST.ScannerPort.openDevice(serial_port_sonar,9600)) !=1)
          ST.EstablishCentre();
          ST.SetStepSize(ST.STEP_FULL);
          ST.UpdateParams();
-         ST.Start(60,300);
+         ST.Start(parameters["Sector1"],parameters["Sector2"]);
          }else{return false;}
     }
     return true;
@@ -381,5 +381,8 @@ void InitParameters()
    parameters["ScaleDenom"] = 11184;
    parameters["RangeUnits"] = 1;  
    parameters["MaxDistance"] = 5000;
+   parameters["Sector1"] = 30;
+   parameters["Sector2"] = 330;
+   
 
 }
